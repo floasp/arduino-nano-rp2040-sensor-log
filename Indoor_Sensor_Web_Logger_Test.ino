@@ -13,7 +13,7 @@ char pass[] = WIFI_PASS; // your network password (use for WPA, or use as key fo
 int keyIndex = 0;        // your network key Index number (needed only for WEP)
 
 int status = WL_IDLE_STATUS;
-char server[] = "asperger.home";
+char server[] = SERVER_NAME;
 String sensor_id = "48";
 String sensor_token = "56cf1f7ab75ee727";
 
