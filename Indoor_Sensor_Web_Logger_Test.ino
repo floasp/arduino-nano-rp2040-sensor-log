@@ -21,7 +21,7 @@ WiFiClient client;
 
 // ---- BME280 ----
 
-bme280_data_t bme280_values;
+bme280_data_t bme280_values[10];
 
 uint16_t dig_T1 = 0;
 uint16_t dig_T2 = 0;
@@ -46,16 +46,17 @@ uint8_t  dig_H6 = 0;
 
 // ---- CCS811 ----
 
-ccs811_data_t css811_values;
+ccs811_data_t css811_values[10];
 
 
 void setup() {
   //Initialize serial and wait for port to open:
   Wire.begin();
   Serial.begin(9600);
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
+  //while (!Serial) {
+  //  ; // wait for serial port to connect. Needed for native USB port only
+  //}
+  delay(1000);
 
   // ---- WIFI Setup ----
 
@@ -110,36 +111,74 @@ void setup() {
 
 void loop() {
 
-  // ---- BME280 Readout ----
-
-  BME280_readValues(&bme280_values);
-
-  Serial.print("[BME280] Temperature: ");
-  Serial.print(bme280_values.temperature);
-  Serial.println(" °C");
-  Serial.print("[BME280] Pressure:    ");
-  Serial.print(bme280_values.pressure);
-  Serial.println(" Pa");
-  Serial.print("[BME280] Humidity:    ");
-  Serial.print(bme280_values.humidity);
-  Serial.println(" %");
+  for(int im = 0; im < 10; im++){
+    Serial.println("[Nano] Wait 1 minute...");
+    // delay 1 minute between measurements
+    delay(10000);
+    delay(10000);
+    delay(10000);
+    delay(10000);
+    delay(10000);
+    delay(10000);
   
-  // ---- CCS811 Readout ----
+    // ---- BME280 Readout ----
+  
+    BME280_readValues(&(bme280_values[im]));
+  
+    Serial.print("[BME280] Temperature: ");
+    Serial.print(bme280_values[im].temperature);
+    Serial.println(" °C");
+    Serial.print("[BME280] Pressure:    ");
+    Serial.print(bme280_values[im].pressure);
+    Serial.println(" Pa");
+    Serial.print("[BME280] Humidity:    ");
+    Serial.print(bme280_values[im].humidity);
+    Serial.println(" %");
+    
+    // ---- CCS811 Readout ----
+  
+    CCS811_readValues(&(css811_values[im]));
+    
+    Serial.print("[CCS811] eCO2: ");
+    Serial.print(css811_values[im].eCO2);
+    Serial.println(" ppm eCO2");
+    Serial.print("[CCS811] eTVOC: ");
+    Serial.print(css811_values[im].eTVOC);
+    Serial.println(" ppb eTVOC");
+  }
 
-  CCS811_readValues(&css811_values);
+  float tem = 0;
+  float pre = 0;
+  float hum = 0;
+  int co2 = 0;
+  int voc = 0;
+
+  for(int im = 0; im < 10; im++){
+    tem += bme280_values[im].temperature;
+    pre += bme280_values[im].pressure;
+    hum += bme280_values[im].humidity;
+    co2 += css811_values[im].eCO2;
+    voc += css811_values[im].eTVOC;
+  }
+
+  tem /= 10;
+  pre /= 10;
+  hum /= 10;
+  co2 /= 10;
+  voc /= 10;
   
-  Serial.print("[CCS811] eCO2: ");
-  Serial.print(css811_values.eCO2);
-  Serial.println(" ppm eCO2");
-  Serial.print("[CCS811] eTVOC: ");
-  Serial.print(css811_values.eTVOC);
-  Serial.println(" ppb eTVOC");
+  // String values = String(bme280_values.temperature, 2) + ";"
+  //               + String(bme280_values.pressure, 8) + ";"
+  //               + String(bme280_values.humidity, 2) + ";"
+  //               + String(css811_values.eCO2) + ";"
+  //               + String(css811_values.eTVOC);
   
-  String values = String(bme280_values.temperature, 2) + ";"
-                + String(bme280_values.pressure, 8) + ";"
-                + String(bme280_values.humidity, 2) + ";"
-                + String(css811_values.eCO2) + ";"
-                + String(css811_values.eTVOC);
+  String values = String(tem, 2) + ";"
+                + String(pre, 8) + ";"
+                + String(hum, 2) + ";"
+                + String(co2) + ";"
+                + String(voc);
+  
   String api_call = "/api/logValue.php?sensorID=" + sensor_id + "&token=" + sensor_token + "&values=" + values;
 //
 //  Serial.println(values);
@@ -216,13 +255,19 @@ void loop() {
     //while (true);
   }
 
-  // wait 1 minute
-  delay(10000);
-  delay(10000);
-  delay(10000);
-  delay(10000);
-  delay(10000);
-  delay(10000);
+  // wait ~10 minutes, couldn't be bothered to make the timer interrupt work.
+  // delay_n_minutes(10);
+}
+
+void delay_n_minutes(int n){
+  for(int i = 0; i < n; i++){
+    delay(10000);
+    delay(10000);
+    delay(10000);
+    delay(10000);
+    delay(10000);
+    delay(10000);
+  }
 }
 
 
@@ -394,8 +439,8 @@ void BME280_printSetup() {
 }
 
 void BME280_readValues(bme280_data_t* values) {
-  int raw_pressure = read20bitFrom(BME280_ADDR, BME280_REG_PRES_MSB);
   int raw_temperature = read20bitFrom(BME280_ADDR, BME280_REG_TEMP_MSB);
+  int raw_pressure = read20bitFrom(BME280_ADDR, BME280_REG_PRES_MSB);
   int raw_humidity = read16bitFrom(BME280_ADDR, BME280_REG_HUM_MSB);
   values->temperature = (float)(BME280_compensate_T_int32(raw_temperature) / (float)100);
   values->pressure = (float)(BME280_compensate_P_int64(raw_pressure) / (float)256);
