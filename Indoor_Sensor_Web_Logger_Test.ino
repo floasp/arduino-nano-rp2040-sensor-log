@@ -48,6 +48,23 @@ uint8_t  dig_H6 = 0;
 
 ccs811_data_t css811_values[10];
 
+// ---- mean sensor values ----
+
+// cumulative sum of the 10 measurements
+// these 3 are multiplied by 100 to get an integer (long) value
+long cum_tem = 0;
+long cum_pre = 0;
+long cum_hum = 0;
+// not scaled because already integer
+long cum_co2 = 0;
+long cum_voc = 0;
+
+// result after dividing by 10 and scaling back to float
+float tem = 0;
+float pre = 0;
+float hum = 0;
+int co2 = 0;
+int voc = 0;
 
 void setup() {
   //Initialize serial and wait for port to open:
@@ -110,7 +127,7 @@ void setup() {
 }
 
 void loop() {
-
+  
   for(int im = 0; im < 10; im++){
     Serial.println("[Nano] Wait 1 minute...");
     // delay 1 minute between measurements
@@ -147,25 +164,25 @@ void loop() {
     Serial.println(" ppb eTVOC");
   }
 
-  float tem = 0;
-  float pre = 0;
-  float hum = 0;
-  int co2 = 0;
-  int voc = 0;
+  cum_tem = 0;
+  cum_pre = 0;
+  cum_hum = 0;
+  cum_co2 = 0;
+  cum_voc = 0;
 
   for(int im = 0; im < 10; im++){
-    tem += bme280_values[im].temperature;
-    pre += bme280_values[im].pressure;
-    hum += bme280_values[im].humidity;
-    co2 += css811_values[im].eCO2;
-    voc += css811_values[im].eTVOC;
+    cum_tem += long(bme280_values[im].temperature * 100);
+    cum_pre += long(bme280_values[im].pressure * 100);
+    cum_hum += long(bme280_values[im].humidity * 100);
+    cum_co2 += long(css811_values[im].eCO2);
+    cum_voc += long(css811_values[im].eTVOC);
   }
 
-  tem /= 10;
-  pre /= 10;
-  hum /= 10;
-  co2 /= 10;
-  voc /= 10;
+  tem = (float(cum_tem / 10) / 100);
+  pre = (float(cum_pre / 10) / 100);
+  hum = (float(cum_hum / 10) / 100);
+  co2 = int(cum_co2 / 10);
+  voc = int(cum_voc / 10);
   
   // String values = String(bme280_values.temperature, 2) + ";"
   //               + String(bme280_values.pressure, 8) + ";"
@@ -181,6 +198,7 @@ void loop() {
   
   String api_call = "/api/logValue.php?sensorID=" + sensor_id + "&token=" + sensor_token + "&values=" + values;
 //
+//  Serial.println("API Call:");
 //  Serial.println(values);
 //  Serial.println(api_call);
 
