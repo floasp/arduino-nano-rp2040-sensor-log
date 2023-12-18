@@ -8,14 +8,17 @@
 
 // ---- WIFI ----
 
-char ssid[] = WIFI_SSID; //  your network SSID (name)
+char ssid[] = WIFI_SSID; // your network SSID (name)
 char pass[] = WIFI_PASS; // your network password (use for WPA, or use as key for WEP)
 int keyIndex = 0;        // your network key Index number (needed only for WEP)
 
 int status = WL_IDLE_STATUS;
 char server[] = SERVER_NAME;
-String sensor_id = "48";
-String sensor_token = "56cf1f7ab75ee727";
+char sensor_id[] = "48";
+char sensor_token[] = "56cf1f7ab75ee727";
+
+char s_values[64];
+char s_apicall[128];
 
 WiFiClient client;
 
@@ -137,6 +140,7 @@ void loop() {
     delay(10000);
     delay(10000);
     delay(10000);
+    // delay(6000);
   
     // ---- BME280 Readout ----
   
@@ -190,17 +194,24 @@ void loop() {
   //               + String(css811_values.eCO2) + ";"
   //               + String(css811_values.eTVOC);
   
-  String values = String(tem, 2) + ";"
-                + String(pre, 8) + ";"
-                + String(hum, 2) + ";"
-                + String(co2) + ";"
-                + String(voc);
+//  String values = String(tem, 2) + ";"
+//                + String(pre, 8) + ";"
+//                + String(hum, 2) + ";"
+//                + String(co2) + ";"
+//                + String(voc);
+
+  memset(s_values, 0, sizeof(s_values));
+  memset(s_apicall, 0, sizeof(s_apicall));
   
-  String api_call = "/api/logValue.php?sensorID=" + sensor_id + "&token=" + sensor_token + "&values=" + values;
+  snprintf(s_values, sizeof(s_values), "%07.2f;%017.8f;%05.2f;%05d;%05d", tem, pre, hum, co2, voc);
+  
+//  String api_call = "/api/logValue.php?sensorID=" + sensor_id + "&token=" + sensor_token + "&values=" + values;
+
+  snprintf(s_apicall, sizeof(s_apicall), "GET /api/logValue.php?sensorID=%s&token=%s&values=%s HTTP/1.1", sensor_id, sensor_token, s_values);
 //
 //  Serial.println("API Call:");
-//  Serial.println(values);
-//  Serial.println(api_call);
+//  Serial.println(s_values);
+//  Serial.println(s_apicall);
 
   // ---- WiFi ----
 
@@ -222,7 +233,8 @@ void loop() {
     //1 5 2 6 7 
 
     
-    client.println(String("GET " + api_call + " HTTP/1.1"));
+//    client.println(String("GET " + api_call + " HTTP/1.1"));
+    client.println(s_apicall);
     client.println("Host: asperger.home");
     client.println("Connection: close");
     client.println();
@@ -246,7 +258,7 @@ void loop() {
     char resp[] = "      ";
     while (client.available()) {
       char c = client.read();
-      //Serial.write(c);
+      // Serial.write(c);
 
       for(int i = 0; i < 5; i++){
         resp[i] = resp[i+1];
